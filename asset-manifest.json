@@ -1,0 +1,23 @@
+{
+  "files": {
+    "main.css": "/t-nakamura-itsol/deploy_react/static/css/main.5f361e03.chunk.css",
+    "main.js": "/t-nakamura-itsol/deploy_react/static/js/main.d78f6d05.chunk.js",
+    "main.js.map": "/t-nakamura-itsol/deploy_react/static/js/main.d78f6d05.chunk.js.map",
+    "runtime-main.js": "/t-nakamura-itsol/deploy_react/static/js/runtime-main.09929b98.js",
+    "runtime-main.js.map": "/t-nakamura-itsol/deploy_react/static/js/runtime-main.09929b98.js.map",
+    "static/js/2.18ca8854.chunk.js": "/t-nakamura-itsol/deploy_react/static/js/2.18ca8854.chunk.js",
+    "static/js/2.18ca8854.chunk.js.map": "/t-nakamura-itsol/deploy_react/static/js/2.18ca8854.chunk.js.map",
+    "index.html": "/t-nakamura-itsol/deploy_react/index.html",
+    "precache-manifest.90d97b711fb7092faf0c007fc8fcd553.js": "/t-nakamura-itsol/deploy_react/precache-manifest.90d97b711fb7092faf0c007fc8fcd553.js",
+    "service-worker.js": "/t-nakamura-itsol/deploy_react/service-worker.js",
+    "static/css/main.5f361e03.chunk.css.map": "/t-nakamura-itsol/deploy_react/static/css/main.5f361e03.chunk.css.map",
+    "static/js/2.18ca8854.chunk.js.LICENSE.txt": "/t-nakamura-itsol/deploy_react/static/js/2.18ca8854.chunk.js.LICENSE.txt",
+    "static/media/logo.svg": "/t-nakamura-itsol/deploy_react/static/media/logo.5d5d9eef.svg"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.09929b98.js",
+    "static/js/2.18ca8854.chunk.js",
+    "static/css/main.5f361e03.chunk.css",
+    "static/js/main.d78f6d05.chunk.js"
+  ]
+}
