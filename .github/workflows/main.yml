@@ -52,9 +52,9 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}    
           ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPO_NAME }}
-          IMAGE_TAG_COMMIT_SHA: ${{ github.sha }}
-          IMAGE_TAG_BRANCH: $(echo ${{ github.ref }} | sed -e "s#refs/heads/##g" | sed -e "s#/#_#g") # TODO: release時を考慮していない(release時は refs/tags/)
+          IMAGE_TAG_COMMIT_SHA: ${{ github.sha }}          
         run: |
+          IMAGE_TAG_BRANCH=$(echo ${{ github.ref }} | sed -e "s#refs/heads/##g" | sed -e "s#/#_#g") # TODO: release時を考慮していない(release時は refs/tags/)
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_COMMIT_SHA -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_BRANCH .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_COMMIT_SHA
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_BRANCH          
