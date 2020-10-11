@@ -1,29 +1,91 @@
-# This is a basic workflow to help you get started with Actions
+name: ecs deploy
 
-name: CI
+on: [pull_request]
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
-on: [pull_request, push]
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1          
+
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'        
+
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on ubuntu-latest
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm run test
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}    
+          ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPO_NAME }}
+          IMAGE_TAG_COMMIT_SHA: ${{ github.sha }} # FIXME: merge commitのSHAになる.できれば元となるcommitのshaにしたい
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          IMAGE_TAG_BRANCH=$(echo ${{ github.head_ref }} | sed -e "s#refs/heads/##g" | sed -e "s#/#_#g") # TODO: pull_requestの時のみ有効。将来的にif文で切り出す
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_COMMIT_SHA -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_BRANCH .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_COMMIT_SHA
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_BRANCH          
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_COMMIT_SHA"
+
+      # 既存のTask定義をダウンロード(security対策) 初回のTask定義はcfnなどで作ること
+      # jq del(.xxx)は不要項目の削除のため行っている
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition --task-definition first-run-task-definition-nakamura:2 --query taskDefinition \
+            | jq 'del(.compatibilities)' \
+            | jq 'del(.taskDefinitionArn)' \
+            | jq 'del(.requiresAttributes)' \
+            | jq 'del(.revision)' \
+            | jq 'del(.status)' \
+            > ./task-definition.json
+
+      # Task定義をAWSに登録するのではなくLocalのTask定義の値を書き換えるだけのもの
+      - name: Render Amazon ECS task definition
+        id: render-nginx-container
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ./task-definition.json
+          container-name: nginx
+          image: ${{steps.build-image.outputs.image}}
+
+      - name: Deploy to Amazon ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-nginx-container.outputs.task-definition }}
+          cluster: nakamura-cluster
+          service: nginx-service-nakamura
+          # ECSサービスが安定した状態になるのを待つかどうか。
+          wait-for-service-stability: false
